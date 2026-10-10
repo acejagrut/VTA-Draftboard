@@ -79,11 +79,12 @@ button:hover { filter: brightness(1.08); }
 .col { flex: 1; display: flex; flex-direction: column; }
 .slot { flex: 1; display: flex; align-items: center; position: relative; padding-right: 16px; }
 .round + .round .slot { padding-left: 16px; }
-.round + .round .slot::before { content: ""; position: absolute; left: 0; width: 16px; top: 50%; border-top: 1.5px solid var(--rule); }
-.round:not(:last-child) .slot::after { content: ""; position: absolute; right: 0; width: 16px; border-right: 1.5px solid var(--rule); }
-.slot:nth-child(odd)::after { top: 50%; bottom: 0; border-top: 1.5px solid var(--rule); }
-.slot:nth-child(even)::after { top: 0; bottom: 50%; border-bottom: 1.5px solid var(--rule); }
-.slot.solo::after { bottom: auto; border-right: 0; }
+/* connectors are real spans, not ::before/::after, because html2canvas misplaces absolute pseudo-elements in the PDF */
+.round + .round .slot > .in { position: absolute; left: 0; width: 16px; top: 50%; border-top: 1.5px solid var(--rule); }
+.round:not(:last-child) .slot > .out { position: absolute; right: 0; width: 16px; border-right: 1.5px solid var(--rule); }
+.slot:nth-child(odd) > .out { top: 50%; bottom: 0; border-top: 1.5px solid var(--rule); }
+.slot:nth-child(even) > .out { top: 0; bottom: 50%; border-bottom: 1.5px solid var(--rule); }
+.slot.solo > .out { bottom: auto; border-right: 0; }
 .match { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); }
 .match.champ { border: 2px solid var(--court); }
 .p { display: flex; align-items: center; height: calc(var(--row) * .42);
@@ -293,13 +294,14 @@ function koHTML(slots) {
     `<div class="half"><h4>Finals</h4>${bracketHTML(parts.map(nm => ({ name: `Winner ${nm}`, ph: true })), 1, null)}</div>`;
 }
 // scale/start/end let one part of a bigger draw keep its real round names and line numbers; start null = no numbers
+const LINKS = '<span class="in"></span><span class="out"></span>';
 function bracketHTML(slots, scale = 1, start = 0, end = 'Champion') {
   let html = '', round = slots, first = true, no = start;
   while (round.length >= 2) {
     const matches = round.length / 2;
     html += `<div class="round"><h4>${roundName(matches * scale)}</h4><div class="col">`;
     for (let i = 0; i < round.length; i += 2)
-      html += `<div class="slot${matches === 1 ? ' solo' : ''}"><div class="match">${line(round[i], first && start !== null && ++no)}${line(round[i + 1], first && start !== null && ++no)}</div></div>`;
+      html += `<div class="slot${matches === 1 ? ' solo' : ''}">${LINKS}<div class="match">${line(round[i], first && start !== null && ++no)}${line(round[i + 1], first && start !== null && ++no)}</div></div>`;
     html += '</div></div>';
     const next = [];
     for (let i = 0; i < round.length; i += 2)
@@ -307,7 +309,7 @@ function bracketHTML(slots, scale = 1, start = 0, end = 'Champion') {
     round = next;
     first = false;
   }
-  html += `<div class="round"><h4>${end}</h4><div class="col"><div class="slot"><div class="match champ">${line('')}</div></div></div></div>`;
+  html += `<div class="round"><h4>${end}</h4><div class="col"><div class="slot">${LINKS}<div class="match champ">${line('')}</div></div></div></div>`;
   return `<div class="scroll"><div class="bracket" style="--m:${slots.length / 2}">${html}</div></div>`;
 }
 function rrHTML(players, title) {
