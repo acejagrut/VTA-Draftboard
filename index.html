@@ -42,6 +42,10 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-w
   text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 input, select, textarea { font: 15px var(--body); color: var(--ink); background: var(--bg);
   border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; width: 100%; text-transform: none; letter-spacing: 0; }
+/* iOS Safari collapses an empty date input and sizes date/select natively; force a normal field box */
+input[type="date"] { -webkit-appearance: none; appearance: none; }
+input[type="date"], select { min-height: 40px; min-width: 0; display: block; }
+input::-webkit-date-and-time-value { text-align: left; }
 textarea { min-height: 220px; resize: vertical; line-height: 1.5; }
 input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
   outline: 3px solid var(--ball); outline-offset: 1px; }
@@ -153,8 +157,6 @@ button:hover { filter: brightness(1.08); }
       <label for="format">Format
         <select id="format">
           <option value="ko">Knockout</option>
-          <option value="groups">Groups → Knockout</option>
-          <option value="rr">Round robin</option>
         </select>
       </label>
     </div>
@@ -330,7 +332,7 @@ function build() {
 
   if (n < 2) { if (n) warn.push('Add at least 2 players.'); }
   else if (fmt === 'ko') {
-    if (n > 64) warn.push('Knockout supports up to 64 players. Use Groups → Knockout for more.');
+    if (n > 64) warn.push('Knockout supports up to 64 players.');
     else {
       const slots = knockout(order), byes = slots.length - n;
       body = koHTML(slots);
