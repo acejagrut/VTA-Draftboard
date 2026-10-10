@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light only">
 <title>VTA Draftboard</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
@@ -20,16 +21,7 @@
   --display: "Barlow Condensed", "Arial Narrow", sans-serif;
   --body: "Barlow", system-ui, sans-serif;
   --row: 54px;
-}
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #0f1612; --panel: #17211b; --ink: #e5ece3; --muted: #9aa99e;
-  --line: #2e3d34; --rule: #5f7066; --court: #7cc89b; --on-court: #0f1612;
-  --ball: #d4e33b; --warn: #e8905f; color-scheme: dark;
-} }
-:root[data-theme="dark"] {
-  --bg: #0f1612; --panel: #17211b; --ink: #e5ece3; --muted: #9aa99e;
-  --line: #2e3d34; --rule: #5f7066; --court: #7cc89b; --on-court: #0f1612;
-  --ball: #d4e33b; --warn: #e8905f; color-scheme: dark;
+  color-scheme: light; /* light only, even when the phone is in dark mode */
 }
 
 * { box-sizing: border-box; }
