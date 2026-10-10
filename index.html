@@ -10,8 +10,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script defer src="vendor/html2canvas.min.js"></script>
+<script defer src="vendor/jspdf.umd.min.js"></script>
 <style>
 /* Layout: control panel on the left, draw sheet on the right; only the sheet prints (A4 landscape) */
 :root {
@@ -66,8 +66,7 @@ button:hover { filter: brightness(1.08); }
 .sheet-head h2 { font: 700 30px/1.05 var(--display); margin: 0; text-wrap: balance; }
 .meta { margin: 4px 0 0; color: var(--muted); }
 .drawno { text-align: right; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-.drawno b { display: block; font: 700 24px/1 var(--display); color: var(--ink); letter-spacing: .04em; font-variant-numeric: tabular-nums; }
-.sheet h3 { font: 700 20px var(--display); margin: 18px 0 8px; letter-spacing: .02em; }
+.drawno b { display: block; font: 700 24px/1 var(--display); color: var(--ink); letter-spacing: 0; font-variant-numeric: tabular-nums; }
 .sheet h4 { font: 600 13px var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 12px 0 6px; }
 .scroll { overflow-x: auto; }
 
@@ -98,21 +97,6 @@ button:hover { filter: brightness(1.08); }
 .ph { color: var(--muted); font-style: italic; font-weight: 400; }
 .half + .half { margin-top: 18px; }
 
-/* Round robin */
-.groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 8px 28px; }
-.groups > * { min-width: 0; }
-.grid { border-collapse: collapse; font-size: 14px; }
-.grid th, .grid td { border: 1px solid var(--line); height: 30px; min-width: 38px; text-align: center; padding: 0 6px; }
-.grid thead th { font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
-.grid th.who { text-align: left; font-weight: 500; white-space: nowrap; min-width: 140px; }
-.grid th.who i { font-style: normal; color: var(--muted); margin-right: 8px; font-variant-numeric: tabular-nums; }
-.grid td.x { background: repeating-linear-gradient(45deg, var(--line) 0 2px, transparent 2px 7px); }
-.games { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
-.games li { display: flex; flex-wrap: wrap; gap: 4px 18px; }
-.games b { width: 5.5em; font-weight: 600; color: var(--muted); }
-.games em { color: var(--muted); font-style: normal; margin: 0 2px; }
-.games u { display: inline-block; width: 52px; border-bottom: 1px solid var(--rule); text-decoration: none; margin-left: 6px; }
-.rest { color: var(--muted); font-style: italic; }
 .empty { color: var(--muted); padding: 40px 0; text-align: center; }
 
 /* zero page margin stops the browser printing its own title/URL/date/page-number lines; spacing comes from .sheet padding */
@@ -128,21 +112,21 @@ button:hover { filter: brightness(1.08); }
   .frame { display: block; position: fixed; inset: 6mm; border: 1.5px solid #000; pointer-events: none; }
   .scroll { overflow: visible; }
   /* sized so a 32-line bracket (a 32-draw, or one half of a 64-draw) fits one A4 landscape page unscaled */
-  /* a page holds at most 16 first-round lines (8 matches), so rows stay at full height */
-  .bracket { --row: clamp(36px, calc(560px / var(--m)), 70px); }
+  /* rows split the page height, so small draws fill the page; line boxes stay capped and the extra becomes gap between matches */
+  .bracket { --row: max(36px, calc(590px / var(--m))); justify-content: center; }
+  .half .bracket { --row: max(36px, calc(540px / var(--m))); } /* halves carry an extra heading; must still fit under the sheet header */
   .round { width: 212px; }
   .round:first-child { width: 250px; }
   .round:last-child { width: 165px; }
   /* taller lines and wider score boxes leave room to write names and scores by hand */
-  .p { font-size: 16px; height: calc(var(--row) * .47); }
+  .p { font-size: 16px; height: min(calc(var(--row) * .37), 28px); }
   .sc { width: 3.6em; }
-  .round h4, .half > h4 { font-size: 14px; color: var(--ink); }
+  .match { border: 1.5px solid var(--rule); }
+  .round h4 { font-size: 14px; color: var(--ink); }
+  .half > h4 { font: 700 20px var(--display); letter-spacing: .04em; color: var(--ink); margin: 0 0 10px; padding-bottom: 4px; border-bottom: 1px solid var(--rule); }
   .sheet-head .logo { width: 84px; height: 84px; }
-  .grid { font-size: 15px; }
-  .grid th, .grid td { height: 34px; }
-  .games { font-size: 15px; }
   .half + .half { break-before: page; }
-  .half, .rr { break-inside: avoid; }
+  .half { break-inside: avoid; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -219,58 +203,22 @@ function knockout(entries) {
   while (size < entries.length) size *= 2;
   return bracketOrder(size).map(s => entries[s - 1] ?? null);
 }
-// Circle method: each pair meets exactly once; with an odd count one player rests each round
-function circle(list) {
-  const a = [...list];
-  if (a.length % 2) a.push(null);
-  const n = a.length, rounds = [];
-  for (let r = 0; r < n - 1; r++) {
-    const m = [];
-    for (let i = 0; i < n / 2; i++) {
-      const x = a[i], y = a[n - 1 - i];
-      m.push(x !== null && y !== null ? [x, y] : [x ?? y, null]);
-    }
-    rounds.push(m);
-    a.splice(1, 0, a.pop());
-  }
-  return rounds;
-}
 const LEVEL = { A: 0, I: 1, B: 2 };
 function parse(text) {
   const seen = new Set(), dups = [], players = [];
   for (const raw of text.split('\n')) {
-    const [name = '', lv = ''] = raw.split(',').map(s => s.trim());
+    const m = raw.match(/^(.*),\s*([AIB])\s*$/i); // "Kumar, Ishaan" stays a name; only a lone A/I/B is a level
+    const name = (m ? m[1] : raw).trim(), lv = m ? m[2] : '';
     if (!name) continue;
     const key = name.toLowerCase();
     if (seen.has(key)) { dups.push(name); continue; }
     seen.add(key);
-    players.push({ name, lv: LEVEL[lv.toUpperCase()[0]] ?? 1 });
+    players.push({ name, lv: LEVEL[lv.toUpperCase()] ?? 1 });
   }
   return { players, dups };
 }
 // random order, then strongest level first (sort is stable, so order inside a level stays random)
 const ranked = (players, r) => shuffle(players, r).sort((a, b) => a.lv - b.lv);
-function snakeGroups(order) {
-  const G = Math.ceil(order.length / 4), groups = Array.from({ length: G }, () => []);
-  order.forEach((p, i) => { const k = i % (2 * G); groups[k < G ? k : 2 * G - 1 - k].push(p); });
-  return groups;
-}
-// swap runners-up so no group's winner and runner-up meet in round 1 (slot i plays slot i^1)
-function fixClashes(slots) {
-  const clash = i => slots[i] && slots[i ^ 1] && slots[i].g === slots[i ^ 1].g;
-  for (let i = 0; i < slots.length; i++) if (slots[i]?.ru && clash(i))
-    for (let j = 0; j < slots.length; j++) if (j !== i && slots[j]?.ru) {
-      [slots[i], slots[j]] = [slots[j], slots[i]];
-      if (!clash(i) && !clash(j)) break;
-      [slots[i], slots[j]] = [slots[j], slots[i]];
-    }
-  return slots;
-}
-const qualifiersOf = G => {
-  const gs = [...Array(G).keys()], L = g => String.fromCharCode(65 + g);
-  return [...gs.map(g => ({ name: `Winner Group ${L(g)}`, ph: true, g })),
-          ...gs.map(g => ({ name: `Runner-up Group ${L(g)}`, ph: true, g, ru: true }))];
-};
 
 // ---- rendering ----
 const $ = s => document.querySelector(s);
@@ -312,24 +260,11 @@ function bracketHTML(slots, scale = 1, start = 0, end = 'Champion') {
   html += `<div class="round"><h4>${end}</h4><div class="col"><div class="slot">${LINKS}<div class="match champ">${line('')}</div></div></div></div>`;
   return `<div class="scroll"><div class="bracket" style="--m:${slots.length / 2}">${html}</div></div>`;
 }
-function rrHTML(players, title) {
-  const names = players.map(p => p.name);
-  let t = '<table class="grid"><thead><tr><th></th>' + names.map((_, i) => `<th>${i + 1}</th>`).join('') +
-    '<th>W</th><th>L</th><th>Pos</th></tr></thead><tbody>';
-  names.forEach((nm, i) => {
-    t += `<tr><th class="who"><i>${i + 1}</i>${esc(nm)}</th>` +
-      names.map((_, j) => `<td${i === j ? ' class="x"' : ''}></td>`).join('') + '<td></td><td></td><td></td></tr>';
-  });
-  t += '</tbody></table>';
-  const games = circle(names).map((m, r) => `<li><b>Round ${r + 1}</b>` + m.map(([a, b]) =>
-    b ? `<span>${esc(a)} <em>v</em> ${esc(b)}<u></u></span>` : `<span class="rest">${esc(a)} rests</span>`).join('') + '</li>').join('');
-  return `<section class="rr">${title ? `<h3>${title}</h3>` : ''}<div class="scroll">${t}</div><h4>Order of play</h4><ol class="games">${games}</ol></section>`;
-}
 
 function build() {
   const { players, dups } = parse($('#names').value);
   let no = $('#drawno').value.trim();
-  if (!/^\d{1,9}$/.test(no)) { no = newNo(); $('#drawno').value = no; }
+  if (/^\d{1,9}$/.test(no)) lastNo = no; else no = lastNo;
   const order = ranked(players, rng(+no)), n = players.length, fmt = $('#format').value;
   const warn = dups.length ? [`Removed duplicate name: ${dups.join(', ')}.`] : [];
   let body = '', meta = '';
@@ -340,39 +275,29 @@ function build() {
     else {
       const slots = knockout(order), byes = slots.length - n;
       body = koHTML(slots);
-      meta = `Knockout · ${slots.length}-draw · ${byes} bye${byes === 1 ? '' : 's'}`;
-    }
-  } else if (fmt === 'rr') {
-    body = rrHTML(order);
-    meta = `Round robin · ${n * (n - 1) / 2} matches`;
-    if (n > 10) warn.push(`Round robin with ${n} players means ${n * (n - 1) / 2} matches. Groups → Knockout may suit better.`);
-  } else {
-    if (n < 6) warn.push('Groups need at least 6 players. Use Round robin instead.');
-    else {
-      const groups = snakeGroups(order), L = i => String.fromCharCode(65 + i);
-      body = `<div class="groups">${groups.map((g, i) => rrHTML(g, `Group ${L(i)}`)).join('')}</div>` +
-        `<h3>Knockout · top 2 from each group</h3>` + koHTML(fixClashes(knockout(qualifiersOf(groups.length))));
-      meta = `Groups → Knockout · ${groups.length} groups`;
+      meta = ['Knockout', `${slots.length}-draw`, byes && `${byes} bye${byes === 1 ? '' : 's'}`].filter(Boolean).join(' · ');
     }
   }
 
   const d = $('#date').value ? new Date($('#date').value + 'T00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-  $('#title').textContent = $('#event').value.trim() || 'Draw';
+  $('#title').textContent = $('#event').value.trim() || 'Tournament Draw';
   $('#meta').textContent = [meta, `${n} players`, d].filter(Boolean).join(' · ');
   $('#no').textContent = no;
   $('#draw').innerHTML = body || '<p class="empty">The draw appears here once the players are entered.</p>';
   $('#warn').textContent = warn.join(' ');
 }
+let lastNo;
 const newNo = () => String(10000 + Math.floor(Math.random() * 90000));
 
 if (typeof document !== 'undefined') {
   $('#date').value = new Date().toLocaleDateString('en-CA');
   $('#drawno').value = newNo();
   $('#form').addEventListener('input', build);
+  $('#drawno').addEventListener('change', e => { e.target.value = lastNo; }); // leaving the field blank/invalid restores the number in use
   $('#form').addEventListener('submit', e => e.preventDefault());
   $('#shuffle').addEventListener('click', () => { $('#drawno').value = newNo(); build(); });
   $('#pdf').addEventListener('click', async () => {
-    const btn = $('#pdf'), name = [$('#event').value.trim() || 'Draw', $('#date').value].filter(Boolean).join(' ');
+    const btn = $('#pdf'), name = [$('#title').textContent, $('#date').value].filter(Boolean).join(' ');
     // phone print engines ignore A4 landscape (cutting the bracket) or lack print, so the PDF is built here; print is the fallback
     if (!window.html2canvas || !window.jspdf) return window.print();
     btn.disabled = true; btn.textContent = 'Making PDF…';
@@ -386,8 +311,12 @@ if (typeof document !== 'undefined') {
         for (const st of doc.querySelectorAll('style')) // lay the copy out with the print styles, whatever the screen size
           st.textContent = st.textContent.replaceAll('@media print', '@media all');
         doc.head.insertAdjacentHTML('beforeend', '<style>.sheet { padding: 0; }</style>');
+        for (const nm of doc.querySelectorAll('.nm')) { // html2canvas ignores text-overflow: ellipsis
+          const t = nm.firstElementChild;
+          while (t && nm.scrollWidth > nm.clientWidth && t.textContent.length > 2) t.textContent = t.textContent.replace(/.?…?$/, '…');
+        }
         const sheet = doc.querySelector('.sheet'), top = sheet.getBoundingClientRect().top;
-        cuts = [...sheet.querySelectorAll('.half:not(h3 + .half), .rr, #draw > h3, #draw > .scroll:not(h3 + .scroll)')].map(e => e.getBoundingClientRect().top - top);
+        cuts = [...sheet.querySelectorAll('.half, #draw > .scroll')].map(e => e.getBoundingClientRect().top - top);
       } });
       const sheetW = canvas.width / S, total = canvas.height / S, pageH = H * sheetW / W;
       const ends = [...new Set(cuts)].filter(y => y > 0 && y < total).sort((a, b) => a - b).concat(total);
@@ -423,15 +352,6 @@ for (let n = 2; n <= 64; n++) {
   const s = knockout([...Array(n).keys()].map(i => ({ name: 'p' + i })));
   for (let i = 0; i < s.length; i += 2) console.assert(s[i] !== null || s[i + 1] !== null, 'bye vs bye at', n);
   console.assert(s.filter(Boolean).length === n, 'every player placed', n);
-}
-for (let n = 2; n <= 16; n++) {
-  const seen = new Set();
-  circle([...Array(n).keys()]).flat().forEach(([a, b]) => { if (b !== null) seen.add(Math.min(a, b) + '-' + Math.max(a, b)); });
-  console.assert(seen.size === n * (n - 1) / 2, 'round robin pairs', n);
-}
-for (let G = 2; G <= 16; G++) {
-  const s = fixClashes(knockout(qualifiersOf(G)));
-  for (let i = 0; i < s.length; i += 2) console.assert(!(s[i] && s[i + 1] && s[i].g === s[i + 1].g), 'same group in round 1', G);
 }
 </script>
 </body>
