@@ -9,6 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 /* Layout: control panel on the left, draw sheet on the right; only the sheet prints (A4 landscape) */
 :root {
@@ -175,7 +177,7 @@ button:hover { filter: brightness(1.08); }
     <p class="hint">The same names and the same draw number always give the same draw.</p>
     <p class="warn" id="warn" role="status"></p>
     <button type="button" class="primary" id="pdf">Save as PDF</button>
-    <p class="hint">In the print window, choose “Save as PDF”. The page is set to A4 landscape.</p>
+    <p class="hint">Downloads an A4 landscape PDF.</p>
   </form>
 
   <section class="sheet" aria-live="polite">
@@ -371,11 +373,47 @@ if (typeof document !== 'undefined') {
   $('#form').addEventListener('input', build);
   $('#form').addEventListener('submit', e => e.preventDefault());
   $('#shuffle').addEventListener('click', () => { $('#drawno').value = newNo(); build(); });
-  $('#pdf').addEventListener('click', () => {
-    const t = document.title; // the browser suggests the PDF file name from the title
-    document.title = [$('#event').value.trim() || 'Draw', $('#date').value].filter(Boolean).join(' ');
-    window.print();
-    document.title = t;
+  $('#pdf').addEventListener('click', async () => {
+    const btn = $('#pdf'), name = [$('#event').value.trim() || 'Draw', $('#date').value].filter(Boolean).join(' ');
+    // phone print engines ignore A4 landscape (cutting the bracket) or lack print, so the PDF is built here; print is the fallback
+    if (!window.html2canvas || !window.jspdf) return window.print();
+    btn.disabled = true; btn.textContent = 'Making PDF…';
+    try {
+      await document.fonts.ready;
+      // ponytail: scale 1.5 keeps a 64-draw under phone canvas limits; very large group events may still hit them
+      const S = 1.5, W = 273, H = 186; // printable A4 landscape area in mm (12mm margins)
+      let cuts = [];
+      const canvas = await html2canvas($('.sheet'), { scale: S, windowWidth: 1123, logging: false, backgroundColor: '#fff', onclone: doc => {
+        for (const st of doc.querySelectorAll('style')) // lay the copy out with the print styles, whatever the screen size
+          st.textContent = st.textContent.replaceAll('@media print', '@media all');
+        doc.head.insertAdjacentHTML('beforeend', '<style>.sheet { padding: 0; }</style>');
+        const sheet = doc.querySelector('.sheet'), top = sheet.getBoundingClientRect().top;
+        cuts = [...sheet.querySelectorAll('.half:not(h3 + .half), .rr, #draw > h3, #draw > .scroll:not(h3 + .scroll)')].map(e => e.getBoundingClientRect().top - top);
+      } });
+      const sheetW = canvas.width / S, total = canvas.height / S, pageH = H * sheetW / W;
+      const ends = [...new Set(cuts)].filter(y => y > 0 && y < total).sort((a, b) => a - b).concat(total);
+      const pdf = new jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      pdf.setLineWidth(0.4);
+      // page breaks only between blocks; a block taller than a page is shrunk to fit, never cut
+      for (let s = 0; s < total;) {
+        let e = ends.find(y => y > s);
+        for (const y of ends) if (y > e && y - s <= pageH) e = y;
+        if (s > 0) pdf.addPage();
+        const slice = document.createElement('canvas');
+        slice.width = canvas.width; slice.height = Math.round((e - s) * S);
+        slice.getContext('2d').drawImage(canvas, 0, -Math.round(s * S));
+        const f = Math.min(1, pageH / (e - s));
+        pdf.addImage(slice, 'PNG', 12 + W * (1 - f) / 2, 12, W * f, (e - s) * W / sheetW * f);
+        pdf.rect(6, 6, 285, 198);
+        s = e;
+      }
+      pdf.save(name + '.pdf');
+    } catch (err) {
+      console.error(String(err));
+      window.print();
+    } finally {
+      btn.disabled = false; btn.textContent = 'Save as PDF';
+    }
   });
   build();
 }
