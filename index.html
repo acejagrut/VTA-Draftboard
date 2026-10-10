@@ -84,7 +84,7 @@ button:hover { filter: brightness(1.08); }
 .slot:nth-child(odd)::after { top: 50%; bottom: 0; border-top: 1.5px solid var(--rule); }
 .slot:nth-child(even)::after { top: 0; bottom: 50%; border-bottom: 1.5px solid var(--rule); }
 .slot.solo::after { bottom: auto; border-right: 0; }
-.match { flex: 1; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); }
+.match { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); }
 .match.champ { border: 2px solid var(--court); }
 .p { display: flex; align-items: center; height: calc(var(--row) * .42);
   font-size: clamp(10px, calc(var(--row) * .27), 14px); border-bottom: 1px solid var(--line); }
@@ -129,12 +129,12 @@ button:hover { filter: brightness(1.08); }
   /* sized so a 32-line bracket (a 32-draw, or one half of a 64-draw) fits one A4 landscape page unscaled */
   /* a page holds at most 16 first-round lines (8 matches), so rows stay at full height */
   .bracket { --row: clamp(36px, calc(560px / var(--m)), 70px); }
-  .round { width: 205px; }
+  .round { width: 212px; }
   .round:first-child { width: 250px; }
-  .round:last-child { width: 185px; }
+  .round:last-child { width: 165px; }
   /* taller lines and wider score boxes leave room to write names and scores by hand */
   .p { font-size: 16px; height: calc(var(--row) * .47); }
-  .sc { width: 4.5em; }
+  .sc { width: 3.6em; }
   .round h4, .half > h4 { font-size: 14px; color: var(--ink); }
   .sheet-head .logo { width: 84px; height: 84px; }
   .grid { font-size: 15px; }
