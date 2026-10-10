@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VTA DrawDesk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: control panel on the left, draw sheet on the right; only the sheet prints (A4 landscape) */
+:root {
+  --bg: #f1f4ee; --panel: #ffffff; --ink: #15231b; --muted: #5b6a60;
+  --line: #cfd8cc; --rule: #8c9a90; --court: #1f5c3a; --on-court: #ffffff;
+  --ball: #d4e33b; --warn: #a84a1a;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "Barlow", system-ui, sans-serif;
+  --row: 54px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1612; --panel: #17211b; --ink: #e5ece3; --muted: #9aa99e;
+  --line: #2e3d34; --rule: #5f7066; --court: #7cc89b; --on-court: #0f1612;
+  --ball: #d4e33b; --warn: #e8905f; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0f1612; --panel: #17211b; --ink: #e5ece3; --muted: #9aa99e;
+  --line: #2e3d34; --rule: #5f7066; --court: #7cc89b; --on-court: #0f1612;
+  --ball: #d4e33b; --warn: #e8905f; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 var(--body); }
+.app { display: grid; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: 20px;
+  max-width: 1440px; margin: 0 auto; padding-block: 20px; padding-inline: 16px; }
+@media (max-width: 820px) { .app { grid-template-columns: minmax(0, 1fr); } }
+
+/* Controls */
+.controls { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px;
+  display: flex; flex-direction: column; gap: 14px; align-self: start; }
+@media (min-width: 821px) { .controls { position: sticky; top: 16px; } }
+.brand { display: flex; align-items: center; gap: 10px; font: 700 26px/1 var(--display); letter-spacing: .02em; margin: 0; }
+.brand img { width: 44px; height: 44px; object-fit: contain; flex: none; }
+.sheet-head .logo { width: 72px; height: 72px; object-fit: contain; flex: none; }
+.sheet-head > div:first-of-type { display: flex; align-items: center; gap: 14px; }
+label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+input, select, textarea { font: 15px var(--body); color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; width: 100%; text-transform: none; letter-spacing: 0; }
+textarea { min-height: 220px; resize: vertical; line-height: 1.5; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+  outline: 3px solid var(--ball); outline-offset: 1px; }
+.hint { font-size: 13px; color: var(--muted); margin: -6px 0 0; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.row { display: flex; gap: 8px; align-items: end; }
+.row > * { flex: 1; min-width: 0; }
+button { font: 600 15px var(--body); border-radius: 6px; padding: 9px 14px; cursor: pointer;
+  border: 1px solid var(--court); background: transparent; color: var(--court); }
+button.primary { background: var(--court); color: var(--on-court); }
+button:hover { filter: brightness(1.08); }
+.warn { color: var(--warn); font-size: 14px; margin: 0; }
+.warn:empty { display: none; }
+
+/* Sheet */
+.sheet { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 22px; min-width: 0; }
+.sheet-head { display: flex; justify-content: space-between; align-items: start; gap: 16px; flex-wrap: wrap;
+  border-bottom: 2px solid var(--ink); padding-bottom: 10px; margin-bottom: 14px; }
+.sheet-head h2 { font: 700 30px/1.05 var(--display); margin: 0; text-wrap: balance; }
+.meta { margin: 4px 0 0; color: var(--muted); }
+.drawno { text-align: right; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.drawno b { display: block; font: 700 24px/1 var(--display); color: var(--ink); letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+.sheet h3 { font: 700 20px var(--display); margin: 18px 0 8px; letter-spacing: .02em; }
+.sheet h4 { font: 600 13px var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 12px 0 6px; }
+.scroll { overflow-x: auto; }
+
+/* Bracket: every round column is the same height; space is split evenly so matches line up with their pair */
+.bracket { display: flex; height: calc(var(--m) * var(--row) + 30px); min-width: max-content; }
+.round { display: flex; flex-direction: column; width: 200px; }
+.round:last-child { width: 170px; }
+.round h4 { height: 30px; margin: 0; }
+.col { flex: 1; display: flex; flex-direction: column; }
+.slot { flex: 1; display: flex; align-items: center; position: relative; padding-right: 16px; }
+.round + .round .slot { padding-left: 16px; }
+.round + .round .slot::before { content: ""; position: absolute; left: 0; width: 16px; top: 50%; border-top: 1.5px solid var(--rule); }
+.round:not(:last-child) .slot::after { content: ""; position: absolute; right: 0; width: 16px; border-right: 1.5px solid var(--rule); }
+.slot:nth-child(odd)::after { top: 50%; bottom: 0; border-top: 1.5px solid var(--rule); }
+.slot:nth-child(even)::after { top: 0; bottom: 50%; border-bottom: 1.5px solid var(--rule); }
+.slot.solo::after { bottom: auto; border-right: 0; }
+.match { flex: 1; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); }
+.match.champ { border: 2px solid var(--court); }
+.p { display: flex; align-items: center; height: calc(var(--row) * .42);
+  font-size: clamp(10px, calc(var(--row) * .27), 14px); border-bottom: 1px solid var(--line); }
+.p:last-child { border-bottom: 0; }
+.p i { font-style: normal; width: 2.2em; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+.nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: .5em; font-weight: 500; }
+.sc { width: 3.4em; align-self: stretch; border-left: 1px solid var(--line); flex: none; }
+.champ .sc { display: none; }
+.bye { color: var(--muted); letter-spacing: .12em; font-size: .85em; font-weight: 400; }
+.ph { color: var(--muted); font-style: italic; font-weight: 400; }
+.half + .half { margin-top: 18px; }
+
+/* Round robin */
+.groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 8px 28px; }
+.groups > * { min-width: 0; }
+.grid { border-collapse: collapse; font-size: 14px; }
+.grid th, .grid td { border: 1px solid var(--line); height: 30px; min-width: 38px; text-align: center; padding: 0 6px; }
+.grid thead th { font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.grid th.who { text-align: left; font-weight: 500; white-space: nowrap; min-width: 140px; }
+.grid th.who i { font-style: normal; color: var(--muted); margin-right: 8px; font-variant-numeric: tabular-nums; }
+.grid td.x { background: repeating-linear-gradient(45deg, var(--line) 0 2px, transparent 2px 7px); }
+.games { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.games li { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.games b { width: 5.5em; font-weight: 600; color: var(--muted); }
+.games em { color: var(--muted); font-style: normal; margin: 0 2px; }
+.games u { display: inline-block; width: 52px; border-bottom: 1px solid var(--rule); text-decoration: none; margin-left: 6px; }
+.rest { color: var(--muted); font-style: italic; }
+.empty { color: var(--muted); padding: 40px 0; text-align: center; }
+
+/* zero page margin stops the browser printing its own title/URL/date/page-number lines; spacing comes from .sheet padding */
+@page { size: A4 landscape; margin: 0; }
+.frame { display: none; }
+@media print {
+  :root:not([data-theme="none"]) { --bg: #fff; --panel: #fff; --ink: #000; --muted: #444; --line: #999;
+    --rule: #333; --court: #000; color-scheme: light; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .controls { display: none; }
+  .app { display: block; padding: 0; max-width: none; }
+  .sheet { border: 0; padding: 12mm; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  .frame { display: block; position: fixed; inset: 6mm; border: 1.5px solid #000; pointer-events: none; }
+  .scroll { overflow: visible; }
+  /* sized so a 32-line bracket (a 32-draw, or one half of a 64-draw) fits one A4 landscape page unscaled */
+  /* a page holds at most 16 first-round lines (8 matches), so rows stay at full height */
+  .bracket { --row: clamp(32px, calc(540px / var(--m)), 64px); }
+  .round { width: 190px; }
+  .round:first-child { width: 230px; }
+  .round:last-child { width: 170px; }
+  .p { font-size: 15px; }
+  .round h4, .half > h4 { font-size: 14px; color: var(--ink); }
+  .sheet-head .logo { width: 84px; height: 84px; }
+  .grid { font-size: 15px; }
+  .grid th, .grid td { height: 34px; }
+  .games { font-size: 15px; }
+  .half + .half { break-before: page; }
+  .half, .rr { break-inside: avoid; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="frame" aria-hidden="true"></div>
+<main class="app">
+  <form class="controls" id="form" autocomplete="off">
+    <h1 class="brand"><img src="vta-logo.png" alt="">VTA DrawDesk</h1>
+    <label for="event">Event name
+      <input id="event" value="VTA Monthly – U12">
+    </label>
+    <div class="row">
+      <label for="date">Date <input id="date" type="date"></label>
+      <label for="format">Format
+        <select id="format">
+          <option value="ko">Knockout</option>
+          <option value="groups">Groups → Knockout</option>
+          <option value="rr">Round robin</option>
+        </select>
+      </label>
+    </div>
+    <label for="names">Players
+      <textarea id="names" spellcheck="false" placeholder="Aarav, A&#10;Vihaan&#10;Ishaan, B&#10;Kabir"></textarea>
+    </label>
+    <p class="hint">One name per line. Optional level after a comma: <b>A</b> strong, <b>I</b> middle, <b>B</b> beginner. Strong players are kept apart and get byes first.</p>
+    <div class="row">
+      <label for="drawno">Draw number <input id="drawno" inputmode="numeric"></label>
+      <button type="button" id="shuffle">Shuffle again</button>
+    </div>
+    <p class="hint">The same names and the same draw number always give the same draw.</p>
+    <p class="warn" id="warn" role="status"></p>
+    <button type="button" class="primary" id="pdf">Save as PDF</button>
+    <p class="hint">In the print window, choose “Save as PDF”. The page is set to A4 landscape.</p>
+  </form>
+
+  <section class="sheet" aria-live="polite">
+    <header class="sheet-head">
+      <div>
+        <img class="logo" src="vta-logo.png" alt="VTA logo">
+        <div>
+          <h2 id="title"></h2>
+          <p class="meta" id="meta"></p>
+        </div>
+      </div>
+      <div class="drawno">Draw no.<b id="no"></b></div>
+    </header>
+    <div id="draw"></div>
+  </section>
+</main>
+
+<script>
+// ---- draw logic (pure) ----
+function rng(seed) { // mulberry32: small seeded PRNG so a draw number always reproduces the same draw
+  return () => {
+    seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function shuffle(a, r) {
+  a = [...a];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+// Standard bracket line order: 1 and 2 in opposite halves, 1-4 in different quarters, etc.
+function bracketOrder(size) {
+  let o = [1];
+  while (o.length < size) { const n = o.length * 2; o = o.flatMap(x => [x, n + 1 - x]); }
+  return o;
+}
+// entries are in priority order; slots past the last entry become byes (null), which land next to the top entries
+function knockout(entries) {
+  let size = 2;
+  while (size < entries.length) size *= 2;
+  return bracketOrder(size).map(s => entries[s - 1] ?? null);
+}
+// Circle method: each pair meets exactly once; with an odd count one player rests each round
+function circle(list) {
+  const a = [...list];
+  if (a.length % 2) a.push(null);
+  const n = a.length, rounds = [];
+  for (let r = 0; r < n - 1; r++) {
+    const m = [];
+    for (let i = 0; i < n / 2; i++) {
+      const x = a[i], y = a[n - 1 - i];
+      m.push(x !== null && y !== null ? [x, y] : [x ?? y, null]);
+    }
+    rounds.push(m);
+    a.splice(1, 0, a.pop());
+  }
+  return rounds;
+}
+const LEVEL = { A: 0, I: 1, B: 2 };
+function parse(text) {
+  const seen = new Set(), dups = [], players = [];
+  for (const raw of text.split('\n')) {
+    const [name = '', lv = ''] = raw.split(',').map(s => s.trim());
+    if (!name) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) { dups.push(name); continue; }
+    seen.add(key);
+    players.push({ name, lv: LEVEL[lv.toUpperCase()[0]] ?? 1 });
+  }
+  return { players, dups };
+}
+// random order, then strongest level first (sort is stable, so order inside a level stays random)
+const ranked = (players, r) => shuffle(players, r).sort((a, b) => a.lv - b.lv);
+function snakeGroups(order) {
+  const G = Math.ceil(order.length / 4), groups = Array.from({ length: G }, () => []);
+  order.forEach((p, i) => { const k = i % (2 * G); groups[k < G ? k : 2 * G - 1 - k].push(p); });
+  return groups;
+}
+// swap runners-up so no group's winner and runner-up meet in round 1 (slot i plays slot i^1)
+function fixClashes(slots) {
+  const clash = i => slots[i] && slots[i ^ 1] && slots[i].g === slots[i ^ 1].g;
+  for (let i = 0; i < slots.length; i++) if (slots[i]?.ru && clash(i))
+    for (let j = 0; j < slots.length; j++) if (j !== i && slots[j]?.ru) {
+      [slots[i], slots[j]] = [slots[j], slots[i]];
+      if (!clash(i) && !clash(j)) break;
+      [slots[i], slots[j]] = [slots[j], slots[i]];
+    }
+  return slots;
+}
+const qualifiersOf = G => {
+  const gs = [...Array(G).keys()], L = g => String.fromCharCode(65 + g);
+  return [...gs.map(g => ({ name: `Winner Group ${L(g)}`, ph: true, g })),
+          ...gs.map(g => ({ name: `Runner-up Group ${L(g)}`, ph: true, g, ru: true }))];
+};
+
+// ---- rendering ----
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const roundName = m => ({ 1: 'Final', 2: 'Semi-finals', 4: 'Quarter-finals' }[m] || `Round of ${m * 2}`);
+
+function line(x, no) {
+  const label = x === null ? '<span class="bye">BYE</span>'
+    : x === '' ? '' : `<span class="${x.ph ? 'ph' : ''}">${esc(x.name)}</span>`;
+  return `<div class="p">${no ? `<i>${no}</i>` : ''}<span class="nm">${label}</span><span class="sc"></span></div>`;
+}
+// scale/start/end let one half of a bigger draw keep its real round names and line numbers
+// draws over 16 lines split into halves/quarters (one per printed page) plus a finals bracket, so print text stays large
+function koHTML(slots) {
+  if (slots.length <= 16) return bracketHTML(slots);
+  const k = slots.length / 16;
+  const parts = k === 2 ? ['Top half', 'Bottom half'] : k === 4 ? ['Quarter 1', 'Quarter 2', 'Quarter 3', 'Quarter 4']
+    : Array.from({ length: k }, (_, i) => `Section ${i + 1}`);
+  const end = { 2: 'Finalist', 4: 'Semi-finalist', 8: 'Quarter-finalist' }[k] || 'Section winner';
+  return parts.map((nm, i) => `<div class="half"><h4>${nm}</h4>${bracketHTML(slots.slice(i * 16, i * 16 + 16), k, i * 16, end)}</div>`).join('') +
+    `<div class="half"><h4>Finals</h4>${bracketHTML(parts.map(nm => ({ name: `Winner ${nm}`, ph: true })), 1, null)}</div>`;
+}
+// scale/start/end let one part of a bigger draw keep its real round names and line numbers; start null = no numbers
+function bracketHTML(slots, scale = 1, start = 0, end = 'Champion') {
+  let html = '', round = slots, first = true, no = start;
+  while (round.length >= 2) {
+    const matches = round.length / 2;
+    html += `<div class="round"><h4>${roundName(matches * scale)}</h4><div class="col">`;
+    for (let i = 0; i < round.length; i += 2)
+      html += `<div class="slot${matches === 1 ? ' solo' : ''}"><div class="match">${line(round[i], first && start !== null && ++no)}${line(round[i + 1], first && start !== null && ++no)}</div></div>`;
+    html += '</div></div>';
+    const next = [];
+    for (let i = 0; i < round.length; i += 2)
+      next.push(first && round[i] === null ? round[i + 1] : first && round[i + 1] === null ? round[i] : '');
+    round = next;
+    first = false;
+  }
+  html += `<div class="round"><h4>${end}</h4><div class="col"><div class="slot"><div class="match champ">${line('')}</div></div></div></div>`;
+  return `<div class="scroll"><div class="bracket" style="--m:${slots.length / 2}">${html}</div></div>`;
+}
+function rrHTML(players, title) {
+  const names = players.map(p => p.name);
+  let t = '<table class="grid"><thead><tr><th></th>' + names.map((_, i) => `<th>${i + 1}</th>`).join('') +
+    '<th>W</th><th>L</th><th>Pos</th></tr></thead><tbody>';
+  names.forEach((nm, i) => {
+    t += `<tr><th class="who"><i>${i + 1}</i>${esc(nm)}</th>` +
+      names.map((_, j) => `<td${i === j ? ' class="x"' : ''}></td>`).join('') + '<td></td><td></td><td></td></tr>';
+  });
+  t += '</tbody></table>';
+  const games = circle(names).map((m, r) => `<li><b>Round ${r + 1}</b>` + m.map(([a, b]) =>
+    b ? `<span>${esc(a)} <em>v</em> ${esc(b)}<u></u></span>` : `<span class="rest">${esc(a)} rests</span>`).join('') + '</li>').join('');
+  return `<section class="rr">${title ? `<h3>${title}</h3>` : ''}<div class="scroll">${t}</div><h4>Order of play</h4><ol class="games">${games}</ol></section>`;
+}
+
+function build() {
+  const { players, dups } = parse($('#names').value);
+  let no = $('#drawno').value.trim();
+  if (!/^\d{1,9}$/.test(no)) { no = newNo(); $('#drawno').value = no; }
+  const order = ranked(players, rng(+no)), n = players.length, fmt = $('#format').value;
+  const warn = dups.length ? [`Removed duplicate name: ${dups.join(', ')}.`] : [];
+  let body = '', meta = '';
+
+  if (n < 2) { if (n) warn.push('Add at least 2 players.'); }
+  else if (fmt === 'ko') {
+    if (n > 64) warn.push('Knockout supports up to 64 players. Use Groups → Knockout for more.');
+    else {
+      const slots = knockout(order), byes = slots.length - n;
+      body = koHTML(slots);
+      meta = `Knockout · ${slots.length}-draw · ${byes} bye${byes === 1 ? '' : 's'}`;
+    }
+  } else if (fmt === 'rr') {
+    body = rrHTML(order);
+    meta = `Round robin · ${n * (n - 1) / 2} matches`;
+    if (n > 10) warn.push(`Round robin with ${n} players means ${n * (n - 1) / 2} matches. Groups → Knockout may suit better.`);
+  } else {
+    if (n < 6) warn.push('Groups need at least 6 players. Use Round robin instead.');
+    else {
+      const groups = snakeGroups(order), L = i => String.fromCharCode(65 + i);
+      body = `<div class="groups">${groups.map((g, i) => rrHTML(g, `Group ${L(i)}`)).join('')}</div>` +
+        `<h3>Knockout · top 2 from each group</h3>` + koHTML(fixClashes(knockout(qualifiersOf(groups.length))));
+      meta = `Groups → Knockout · ${groups.length} groups`;
+    }
+  }
+
+  const d = $('#date').value ? new Date($('#date').value + 'T00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  $('#title').textContent = $('#event').value.trim() || 'Draw';
+  $('#meta').textContent = [meta, `${n} players`, d].filter(Boolean).join(' · ');
+  $('#no').textContent = no;
+  $('#draw').innerHTML = body || '<p class="empty">The draw appears here once the players are entered.</p>';
+  $('#warn').textContent = warn.join(' ');
+}
+const newNo = () => String(10000 + Math.floor(Math.random() * 90000));
+
+if (typeof document !== 'undefined') {
+  $('#date').value = new Date().toLocaleDateString('en-CA');
+  $('#drawno').value = newNo();
+  $('#form').addEventListener('input', build);
+  $('#form').addEventListener('submit', e => e.preventDefault());
+  $('#shuffle').addEventListener('click', () => { $('#drawno').value = newNo(); build(); });
+  $('#pdf').addEventListener('click', () => {
+    const t = document.title; // the browser suggests the PDF file name from the title
+    document.title = [$('#event').value.trim() || 'Draw', $('#date').value].filter(Boolean).join(' ');
+    window.print();
+    document.title = t;
+  });
+  build();
+}
+
+// ---- self-check (runs in the console on load) ----
+console.assert(bracketOrder(8).join() === '1,8,4,5,2,7,3,6', 'bracket order');
+for (let n = 2; n <= 64; n++) {
+  const s = knockout([...Array(n).keys()].map(i => ({ name: 'p' + i })));
+  for (let i = 0; i < s.length; i += 2) console.assert(s[i] !== null || s[i + 1] !== null, 'bye vs bye at', n);
+  console.assert(s.filter(Boolean).length === n, 'every player placed', n);
+}
+for (let n = 2; n <= 16; n++) {
+  const seen = new Set();
+  circle([...Array(n).keys()]).flat().forEach(([a, b]) => { if (b !== null) seen.add(Math.min(a, b) + '-' + Math.max(a, b)); });
+  console.assert(seen.size === n * (n - 1) / 2, 'round robin pairs', n);
+}
+for (let G = 2; G <= 16; G++) {
+  const s = fixClashes(knockout(qualifiersOf(G)));
+  for (let i = 0; i < s.length; i += 2) console.assert(!(s[i] && s[i + 1] && s[i].g === s[i + 1].g), 'same group in round 1', G);
+}
+</script>
+</body>
+</html>
