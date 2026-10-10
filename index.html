@@ -128,11 +128,13 @@ button:hover { filter: brightness(1.08); }
   .scroll { overflow: visible; }
   /* sized so a 32-line bracket (a 32-draw, or one half of a 64-draw) fits one A4 landscape page unscaled */
   /* a page holds at most 16 first-round lines (8 matches), so rows stay at full height */
-  .bracket { --row: clamp(32px, calc(540px / var(--m)), 64px); }
-  .round { width: 190px; }
-  .round:first-child { width: 230px; }
-  .round:last-child { width: 170px; }
-  .p { font-size: 15px; }
+  .bracket { --row: clamp(36px, calc(560px / var(--m)), 70px); }
+  .round { width: 205px; }
+  .round:first-child { width: 250px; }
+  .round:last-child { width: 185px; }
+  /* taller lines and wider score boxes leave room to write names and scores by hand */
+  .p { font-size: 16px; height: calc(var(--row) * .47); }
+  .sc { width: 4.5em; }
   .round h4, .half > h4 { font-size: 14px; color: var(--ink); }
   .sheet-head .logo { width: 84px; height: 84px; }
   .grid { font-size: 15px; }
@@ -374,8 +376,9 @@ if (typeof document !== 'undefined') {
     btn.disabled = true; btn.textContent = 'Making PDF…';
     try {
       await document.fonts.ready;
-      // ponytail: scale 1.5 keeps a 64-draw under phone canvas limits; very large group events may still hit them
-      const S = 1.5, W = 273, H = 186; // printable A4 landscape area in mm (12mm margins)
+      // ~300 dpi for one page; scaled down for multi-page draws to stay under the ~16.7M px iOS canvas limit
+      const pages = document.querySelectorAll('#draw .half').length || 1;
+      const S = Math.min(3, Math.sqrt(16e6 / (1123 * 800 * pages))), W = 273, H = 186; // printable A4 landscape area in mm (12mm margins)
       let cuts = [];
       const canvas = await html2canvas($('.sheet'), { scale: S, windowWidth: 1123, logging: false, backgroundColor: '#fff', onclone: doc => {
         for (const st of doc.querySelectorAll('style')) // lay the copy out with the print styles, whatever the screen size
