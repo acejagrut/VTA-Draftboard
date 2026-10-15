@@ -32,8 +32,10 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 var(
 
 /* Controls */
 .controls { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px;
-  display: flex; flex-direction: column; gap: 14px; align-self: start; }
-@media (min-width: 821px) { .controls { position: sticky; top: 16px; } }
+  display: flex; flex-direction: column; gap: 14px; }
+.side { display: flex; flex-direction: column; gap: 12px; align-self: start; min-width: 0; }
+@media (min-width: 821px) { .side { position: sticky; top: 16px; } }
+[hidden] { display: none !important; }
 .brand { display: flex; align-items: center; gap: 10px; font: 700 26px/1 var(--display); letter-spacing: .02em; margin: 0; }
 .brand img { width: 44px; height: 44px; object-fit: contain; flex: none; }
 .sheet-head .logo { width: 72px; height: 72px; object-fit: contain; flex: none; }
@@ -43,9 +45,13 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-w
 input, select, textarea { font: 15px var(--body); color: var(--ink); background: var(--bg);
   border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; width: 100%; text-transform: none; letter-spacing: 0; }
 /* iOS Safari collapses an empty date input and sizes date/select natively; force a normal field box */
-input[type="date"] { -webkit-appearance: none; appearance: none; }
-input[type="date"], select { min-height: 40px; min-width: 0; display: block; }
+input[type="date"], input[type="time"] { -webkit-appearance: none; appearance: none; }
+input[type="date"], input[type="time"], select { min-height: 40px; min-width: 0; display: block; }
 input::-webkit-date-and-time-value { text-align: left; }
+.courts { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.courts legend { padding: 0; margin-bottom: 5px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.courts label { flex-direction: row; align-items: center; gap: 3px; font-size: 15px; color: var(--ink); min-height: 40px; }
+.courts input { width: auto; }
 textarea { min-height: 220px; resize: vertical; line-height: 1.5; }
 input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
   outline: 3px solid var(--ball); outline-offset: 1px; }
@@ -58,13 +64,36 @@ button.primary { background: var(--court); color: var(--on-court); }
 button:hover { filter: brightness(1.08); }
 .warn { color: var(--warn); font-size: 14px; margin: 0; }
 .warn:empty { display: none; }
+details summary { cursor: pointer; font-weight: 600; color: var(--court); padding: 6px 0; }
+details > :not(summary) { margin-top: 8px; }
+.help ul { margin-bottom: 0; padding-left: 18px; font-size: 14px; color: var(--muted); }
+.actions { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px;
+  display: flex; flex-direction: column; gap: 10px; }
+.actions .row { align-items: stretch; }
+.actions button { padding-inline: 8px; }
+.summary { margin: 0; font: 700 20px/1.2 var(--display); color: var(--court); }
 
-/* Sheet */
+/* Phone: Players and Draw are two tabs; the action bar stays pinned to the bottom of both */
+.tabs { display: none; }
+@media screen and (max-width: 820px) {
+  .tabs { display: flex; position: sticky; top: 0; z-index: 2; background: var(--panel); border-bottom: 1px solid var(--line); }
+  .tabs button { flex: 1; border: 0; border-radius: 0; border-bottom: 3px solid transparent; min-height: 50px; font-size: 17px; color: var(--muted); }
+  .tabs [aria-selected="true"] { border-bottom-color: var(--court); color: var(--court); }
+  .actions { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2; border-radius: 0; border-width: 1px 0 0;
+    padding: 10px 16px 12px; box-shadow: 0 -4px 12px rgb(0 0 0 / .08); }
+  .summary { font-size: 18px; }
+  .app { padding-bottom: 180px; }
+  body[data-tab="draw"] .controls, body:not([data-tab="draw"]) #sheets { display: none; }
+}
+
+/* Sheet: one per category */
+#sheets { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .sheet { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 22px; min-width: 0; }
 .sheet-head { display: flex; justify-content: space-between; align-items: start; gap: 16px; flex-wrap: wrap;
   border-bottom: 2px solid var(--ink); padding-bottom: 10px; margin-bottom: 14px; }
 .sheet-head h2 { font: 700 30px/1.05 var(--display); margin: 0; text-wrap: balance; }
 .meta { margin: 4px 0 0; color: var(--muted); }
+.meta b { font-size: 1.2em; font-weight: 700; color: var(--ink); background: #fff1a8; padding: 0 5px; border-radius: 3px; }
 .drawno { text-align: right; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .drawno b { display: block; font: 700 24px/1 var(--display); color: var(--ink); letter-spacing: 0; font-variant-numeric: tabular-nums; }
 .sheet h4 { font: 600 13px var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 12px 0 6px; }
@@ -85,6 +114,8 @@ button:hover { filter: brightness(1.08); }
 .slot:nth-child(even) > .out { top: 0; bottom: 50%; border-bottom: 1.5px solid var(--rule); }
 .slot.solo > .out { bottom: auto; border-right: 0; }
 .match { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); }
+.match { display: flex; }
+.ps { flex: 1; min-width: 0; }
 .match.champ { border: 2px solid var(--court); }
 .p { display: flex; align-items: center; height: calc(var(--row) * .42);
   font-size: clamp(10px, calc(var(--row) * .27), 14px); border-bottom: 1px solid var(--line); }
@@ -99,6 +130,20 @@ button:hover { filter: brightness(1.08); }
 
 .empty { color: var(--muted); padding: 40px 0; text-align: center; }
 
+/* Phone: header text wraps instead of running off the edge, bigger tap targets, 16px fields stop iOS zooming on focus */
+.sheet-head > div:first-of-type, .sheet-head > div:first-of-type > div { min-width: 0; }
+.courts input { width: 22px; height: 22px; accent-color: var(--court); }
+@media screen and (max-width: 600px) {
+  input, select, textarea { font-size: 16px; }
+  .courts { gap: 4px 14px; }
+  .courts label { font-size: 17px; gap: 6px; min-height: 44px; }
+  button { min-height: 46px; }
+  .sheet { padding: 14px; }
+  .sheet-head .logo { width: 48px; height: 48px; }
+  .sheet-head h2 { font-size: 24px; }
+  .drawno { text-align: left; }
+}
+
 /* zero page margin stops the browser printing its own title/URL/date/page-number lines; spacing comes from .sheet padding */
 @page { size: A4 landscape; margin: 0; }
 .frame { display: none; }
@@ -106,7 +151,7 @@ button:hover { filter: brightness(1.08); }
   :root:not([data-theme="none"]) { --bg: #fff; --panel: #fff; --ink: #000; --muted: #444; --line: #999;
     --rule: #333; --court: #000; color-scheme: light; }
   body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .controls { display: none; }
+  .side, .tabs { display: none; }
   .app { display: block; padding: 0; max-width: none; }
   .sheet { border: 0; padding: 12mm; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
   .frame { display: block; position: fixed; inset: 6mm; border: 1.5px solid #000; pointer-events: none; }
@@ -125,7 +170,8 @@ button:hover { filter: brightness(1.08); }
   .round h4 { font-size: 14px; color: var(--ink); }
   .half > h4 { font: 700 20px var(--display); letter-spacing: .04em; color: var(--ink); margin: 0 0 10px; padding-bottom: 4px; border-bottom: 1px solid var(--rule); }
   .sheet-head .logo { width: 84px; height: 84px; }
-  .half + .half { break-before: page; }
+  #sheets { display: block; }
+  .half + .half, .sheet + .sheet { break-before: page; }
   .half { break-inside: avoid; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -133,47 +179,53 @@ button:hover { filter: brightness(1.08); }
 </head>
 <body>
 <div class="frame" aria-hidden="true"></div>
+<nav class="tabs" role="tablist" aria-label="View">
+  <button type="button" role="tab" data-tab="players" aria-selected="true">1 · Players</button>
+  <button type="button" role="tab" data-tab="draw" aria-selected="false">2 · Draw</button>
+</nav>
 <main class="app">
+  <div class="side">
   <form class="controls" id="form" autocomplete="off">
     <h1 class="brand"><img src="vta-logo.png" alt="">VTA Draftboard</h1>
     <label for="event">Event name
-      <input id="event" placeholder="e.g. VTA Monthly – U12">
+      <input id="event" placeholder="e.g. VTA Monthly">
     </label>
     <div class="row">
       <label for="date">Date <input id="date" type="date"></label>
-      <label for="format">Format
-        <select id="format">
-          <option value="ko">Knockout</option>
-        </select>
-      </label>
+      <label for="start">Start time <input id="start" type="time"></label>
     </div>
+    <fieldset class="courts"><legend>Courts</legend>
+      <label><input type="checkbox" value="1">1</label><label><input type="checkbox" value="2">2</label><label><input type="checkbox" value="3">3</label><label><input type="checkbox" value="4">4</label><label><input type="checkbox" value="5">5</label>
+    </fieldset>
     <label for="names">Players
-      <textarea id="names" spellcheck="false" placeholder="Aarav, A&#10;Vihaan&#10;Ishaan, B&#10;Kabir"></textarea>
+      <textarea id="names" spellcheck="false" placeholder="Type or paste names, one per line&#10;&#10;Aarav, A&#10;Vihaan&#10;Ishaan, B"></textarea>
     </label>
-    <p class="hint">One name per line. Optional level after a comma: <b>A</b> strong, <b>I</b> middle, <b>B</b> beginner. Strong players are kept apart and get byes first.</p>
-    <div class="row">
+    <details class="help"><summary>How to type names</summary>
+      <ul>
+        <li>One name per line. Paste from Excel, Sheets or WhatsApp works too.</li>
+        <li>Level after a comma: <b>A</b> strong, <b>I</b> middle, <b>B</b> beginner. Strong players are kept apart and get byes first.</li>
+        <li>A line like <b># U12</b> starts a separate draw for that category.</li>
+        <li>The list is remembered on this device.</li>
+      </ul>
+    </details>
+    <details class="more"><summary>More options</summary>
+      <select id="format" hidden><option value="ko">Knockout</option></select><!-- shown again when there is a second format -->
       <label for="drawno">Draw number <input id="drawno" inputmode="numeric"></label>
-      <button type="button" id="shuffle">Shuffle again</button>
-    </div>
-    <p class="hint">The same names and the same draw number always give the same draw.</p>
-    <p class="warn" id="warn" role="status"></p>
-    <button type="button" class="primary" id="pdf">Save as PDF</button>
-    <p class="hint">Downloads an A4 landscape PDF.</p>
+      <p class="hint">The same names and the same draw number always give the same draw.</p>
+    </details>
   </form>
+  <div class="actions">
+    <p class="summary" id="summary"></p>
+    <p class="warn" id="warn" role="status"></p>
+    <div class="row">
+      <button type="button" id="shuffle">Shuffle</button>
+      <button type="button" class="primary" id="pdf">Save PDF</button>
+      <button type="button" id="share">Share PDF</button>
+    </div>
+  </div>
+  </div>
 
-  <section class="sheet" aria-live="polite">
-    <header class="sheet-head">
-      <div>
-        <img class="logo" src="vta-logo.png" alt="VTA logo">
-        <div>
-          <h2 id="title"></h2>
-          <p class="meta" id="meta"></p>
-        </div>
-      </div>
-      <div class="drawno">Draw no.<b id="no"></b></div>
-    </header>
-    <div id="draw"></div>
-  </section>
+  <div id="sheets" aria-live="polite"></div>
 </main>
 
 <script>
@@ -204,18 +256,24 @@ function knockout(entries) {
   return bracketOrder(size).map(s => entries[s - 1] ?? null);
 }
 const LEVEL = { A: 0, I: 1, B: 2 };
+// a line "# U12" or "U12:" starts a new category (own draw); list numbers, bullets and spreadsheet tabs from pasted lists are cleaned off
 function parse(text) {
-  const seen = new Set(), dups = [], players = [];
-  for (const raw of text.split('\n')) {
+  const groups = [];
+  let g;
+  for (let raw of text.split('\n')) {
+    const h = raw.match(/^\s*#\s*(.*?)\s*$/) || raw.match(/^\s*([^,\t]+?):\s*$/);
+    if (h) { groups.push(g = { cat: h[1].toUpperCase(), players: [], dups: [], seen: new Set() }); continue; }
+    raw = raw.replace(/\t+/g, ', ').replace(/[,\s]+$/, '').replace(/^\s*(?:\d{1,3}\s*[.):,-]|[-•*●▪])\s*/, '');
     const m = raw.match(/^(.*),\s*([AIB])\s*$/i); // "Kumar, Ishaan" stays a name; only a lone A/I/B is a level
     const name = (m ? m[1] : raw).trim(), lv = m ? m[2] : '';
     if (!name) continue;
+    if (!g) groups.push(g = { cat: '', players: [], dups: [], seen: new Set() });
     const key = name.toLowerCase();
-    if (seen.has(key)) { dups.push(name); continue; }
-    seen.add(key);
-    players.push({ name, lv: LEVEL[lv.toUpperCase()] ?? 1 });
+    if (g.seen.has(key)) { g.dups.push(name); continue; }
+    g.seen.add(key);
+    g.players.push({ name, lv: LEVEL[lv.toUpperCase()] ?? 1 });
   }
-  return { players, dups };
+  return groups.filter(x => x.players.length);
 }
 // random order, then strongest level first (sort is stable, so order inside a level stays random)
 const ranked = (players, r) => shuffle(players, r).sort((a, b) => a.lv - b.lv);
@@ -249,7 +307,7 @@ function bracketHTML(slots, scale = 1, start = 0, end = 'Champion') {
     const matches = round.length / 2;
     html += `<div class="round"><h4>${roundName(matches * scale)}</h4><div class="col">`;
     for (let i = 0; i < round.length; i += 2)
-      html += `<div class="slot${matches === 1 ? ' solo' : ''}">${LINKS}<div class="match">${line(round[i], first && start !== null && ++no)}${line(round[i + 1], first && start !== null && ++no)}</div></div>`;
+      html += `<div class="slot${matches === 1 ? ' solo' : ''}">${LINKS}<div class="match"><div class="ps">${line(round[i], first && start !== null && ++no)}${line(round[i + 1], first && start !== null && ++no)}</div></div></div>`;
     html += '</div></div>';
     const next = [];
     for (let i = 0; i < round.length; i += 2)
@@ -262,86 +320,123 @@ function bracketHTML(slots, scale = 1, start = 0, end = 'Champion') {
 }
 
 function build() {
-  const { players, dups } = parse($('#names').value);
+  pending = null; $('#share').textContent = SHARE; // a PDF made before this edit is out of date
+  const groups = parse($('#names').value);
   let no = $('#drawno').value.trim();
   if (/^\d{1,9}$/.test(no)) lastNo = no; else no = lastNo;
-  const order = ranked(players, rng(+no)), n = players.length, fmt = $('#format').value;
-  const warn = dups.length ? [`Removed duplicate name: ${dups.join(', ')}.`] : [];
-  let body = '', meta = '';
-
-  if (n < 2) { if (n) warn.push('Add at least 2 players.'); }
-  else if (fmt === 'ko') {
-    if (n > 64) warn.push('Knockout supports up to 64 players.');
-    else {
-      const slots = knockout(order), byes = slots.length - n;
-      body = koHTML(slots);
-      meta = ['Knockout', `${slots.length}-draw`, byes && `${byes} bye${byes === 1 ? '' : 's'}`].filter(Boolean).join(' · ');
-    }
-  }
-
+  const fmt = $('#format').value, ev = $('#event').value.trim(), warn = [], sum = [];
   const d = $('#date').value ? new Date($('#date').value + 'T00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-  $('#title').textContent = $('#event').value.trim() || 'Tournament Draw';
-  $('#meta').textContent = [meta, `${n} players`, d].filter(Boolean).join(' · ');
-  $('#no').textContent = no;
-  $('#draw').innerHTML = body || '<p class="empty">The draw appears here once the players are entered.</p>';
+  const t = $('#start').value ? 'Start ' + new Date('2000-01-01T' + $('#start').value).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : '';
+  const c = [...document.querySelectorAll('.courts input:checked')].map(x => +x.value);
+  const courts = !c.length ? '' : c.length === 1 ? `Court ${c[0]}`
+    : c.at(-1) - c[0] === c.length - 1 ? `Courts ${c[0]}–${c.at(-1)}` : `Courts ${c.join(', ')}`;
+
+  $('#sheets').innerHTML = (groups.length ? groups : [{ cat: '', players: [], dups: [] }]).map(({ cat, players, dups }) => {
+    const order = ranked(players, rng(+no)), n = players.length, tag = groups.length > 1 ? `${cat || 'Players'}: ` : '';
+    if (dups.length) warn.push(`${tag}Removed duplicate name: ${dups.join(', ')}.`);
+    let body = '', meta = '', size = 0;
+    if (n < 2) { if (n) warn.push(tag + 'Add at least 2 players.'); }
+    else if (fmt === 'ko') {
+      if (n > 64) warn.push(tag + 'Knockout supports up to 64 players.');
+      else {
+        const slots = knockout(order), byes = slots.length - n;
+        size = slots.length;
+        body = koHTML(slots);
+        meta = ['Knockout', `${slots.length}-draw`, byes && `${byes} bye${byes === 1 ? '' : 's'}`].filter(Boolean).join(' · ');
+      }
+    }
+    sum.push(`${cat ? cat + ': ' : ''}${n} player${n === 1 ? '' : 's'}${size ? ` → ${size}-draw` : ''}`);
+    const title = [ev, cat].filter(Boolean).join(' – ') || 'Tournament Draw';
+    // meta parts are all generated, none is user text
+    return `<section class="sheet"><header class="sheet-head"><div><img class="logo" src="vta-logo.png" alt="VTA logo"><div>
+      <h2>${esc(title)}</h2><p class="meta">${[meta, `${n} players`, ...[d, t, courts].filter(Boolean).map(x => `<b>${x}</b>`)].filter(Boolean).join(' · ')}</p>
+      </div></div><div class="drawno">Draw no.<b>${no}</b></div></header>
+      <div class="draw">${body || '<p class="empty">The draw appears here once the players are entered.</p>'}</div></section>`;
+  }).join('');
+  $('#summary').textContent = groups.length ? sum.join(' · ') : 'Add players to see the draw';
   $('#warn').textContent = warn.join(' ');
 }
-let lastNo;
+
+// one PDF with every category's sheet, each starting on a new page
+async function makePdf() {
+  await document.fonts.ready;
+  const W = 273, H = 186; // printable A4 landscape area in mm (12mm margins)
+  const pdf = new jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  pdf.setLineWidth(0.4);
+  let firstPage = true;
+  for (const [k, el] of [...document.querySelectorAll('.sheet')].entries()) {
+    // ~300 dpi for one page; scaled down for multi-page draws to stay under the ~16.7M px iOS canvas limit
+    const pages = el.querySelectorAll('.half').length || 1;
+    const S = Math.min(3, Math.sqrt(16e6 / (1123 * 800 * pages)));
+    let cuts = [];
+    const canvas = await html2canvas(el, { scale: S, windowWidth: 1123, logging: false, backgroundColor: '#fff', onclone: doc => {
+      for (const st of doc.querySelectorAll('style')) // lay the copy out with the print styles, whatever the screen size
+        st.textContent = st.textContent.replaceAll('@media print', '@media all');
+      doc.head.insertAdjacentHTML('beforeend', '<style>.sheet { padding: 0; }</style>');
+      const sheet = doc.querySelectorAll('.sheet')[k], top = sheet.getBoundingClientRect().top;
+      for (const nm of sheet.querySelectorAll('.nm')) { // html2canvas ignores text-overflow: ellipsis
+        const t = nm.firstElementChild;
+        while (t && nm.scrollWidth > nm.clientWidth && t.textContent.length > 2) t.textContent = t.textContent.replace(/.?…?$/, '…');
+      }
+      cuts = [...sheet.querySelectorAll('.half, .draw > .scroll')].map(e => e.getBoundingClientRect().top - top);
+    } });
+    const sheetW = canvas.width / S, total = canvas.height / S, pageH = H * sheetW / W;
+    const ends = [...new Set(cuts)].filter(y => y > 0 && y < total).sort((a, b) => a - b).concat(total);
+    // page breaks only between blocks; a block taller than a page is shrunk to fit, never cut
+    for (let s = 0; s < total;) {
+      let e = ends.find(y => y > s);
+      for (const y of ends) if (y > e && y - s <= pageH) e = y;
+      if (!firstPage) pdf.addPage();
+      firstPage = false;
+      const slice = document.createElement('canvas');
+      slice.width = canvas.width; slice.height = Math.round((e - s) * S);
+      slice.getContext('2d').drawImage(canvas, 0, -Math.round(s * S));
+      const f = Math.min(1, pageH / (e - s));
+      pdf.addImage(slice, 'PNG', 12 + W * (1 - f) / 2, 12, W * f, (e - s) * W / sheetW * f);
+      pdf.rect(6, 6, 285, 198);
+      s = e;
+    }
+  }
+  return pdf;
+}
+// phone print engines ignore A4 landscape (cutting the bracket) or lack print, so the PDF is built here; print is the fallback
+async function withPdf(btn, label, use) {
+  showTab('draw'); // the sheets must be on screen to be drawn into the PDF
+  if (!window.html2canvas || !window.jspdf) return window.print();
+  btn.disabled = true; btn.textContent = 'Making PDF…';
+  try { await use(await makePdf()); }
+  catch (err) { console.error(String(err)); window.print(); }
+  finally { btn.disabled = false; btn.textContent = label; }
+}
+const pdfName = () => [$('#event').value.trim() || 'Tournament Draw', $('#date').value].filter(Boolean).join(' ');
+const SHARE = 'Share PDF';
+function showTab(tab) {
+  document.body.dataset.tab = tab;
+  for (const b of document.querySelectorAll('.tabs button')) b.setAttribute('aria-selected', b.dataset.tab === tab);
+}
+let lastNo, pending = null; // pending: a made PDF the browser refused to share because making it outlasted the tap; the next tap shares it
 const newNo = () => String(10000 + Math.floor(Math.random() * 90000));
 
 if (typeof document !== 'undefined') {
-  $('#date').value = new Date().toLocaleDateString('en-CA');
   $('#drawno').value = newNo();
+  try { $('#names').value = localStorage.getItem('vta-names') || ''; } catch {} // player list is remembered on this device
+  $('#names').addEventListener('input', () => { try { localStorage.setItem('vta-names', $('#names').value); } catch {} });
   $('#form').addEventListener('input', build);
   $('#drawno').addEventListener('change', e => { e.target.value = lastNo; }); // leaving the field blank/invalid restores the number in use
   $('#form').addEventListener('submit', e => e.preventDefault());
   $('#shuffle').addEventListener('click', () => { $('#drawno').value = newNo(); build(); });
-  $('#pdf').addEventListener('click', async () => {
-    const btn = $('#pdf'), name = [$('#title').textContent, $('#date').value].filter(Boolean).join(' ');
-    // phone print engines ignore A4 landscape (cutting the bracket) or lack print, so the PDF is built here; print is the fallback
-    if (!window.html2canvas || !window.jspdf) return window.print();
-    btn.disabled = true; btn.textContent = 'Making PDF…';
-    try {
-      await document.fonts.ready;
-      // ~300 dpi for one page; scaled down for multi-page draws to stay under the ~16.7M px iOS canvas limit
-      const pages = document.querySelectorAll('#draw .half').length || 1;
-      const S = Math.min(3, Math.sqrt(16e6 / (1123 * 800 * pages))), W = 273, H = 186; // printable A4 landscape area in mm (12mm margins)
-      let cuts = [];
-      const canvas = await html2canvas($('.sheet'), { scale: S, windowWidth: 1123, logging: false, backgroundColor: '#fff', onclone: doc => {
-        for (const st of doc.querySelectorAll('style')) // lay the copy out with the print styles, whatever the screen size
-          st.textContent = st.textContent.replaceAll('@media print', '@media all');
-        doc.head.insertAdjacentHTML('beforeend', '<style>.sheet { padding: 0; }</style>');
-        for (const nm of doc.querySelectorAll('.nm')) { // html2canvas ignores text-overflow: ellipsis
-          const t = nm.firstElementChild;
-          while (t && nm.scrollWidth > nm.clientWidth && t.textContent.length > 2) t.textContent = t.textContent.replace(/.?…?$/, '…');
-        }
-        const sheet = doc.querySelector('.sheet'), top = sheet.getBoundingClientRect().top;
-        cuts = [...sheet.querySelectorAll('.half, #draw > .scroll')].map(e => e.getBoundingClientRect().top - top);
-      } });
-      const sheetW = canvas.width / S, total = canvas.height / S, pageH = H * sheetW / W;
-      const ends = [...new Set(cuts)].filter(y => y > 0 && y < total).sort((a, b) => a - b).concat(total);
-      const pdf = new jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-      pdf.setLineWidth(0.4);
-      // page breaks only between blocks; a block taller than a page is shrunk to fit, never cut
-      for (let s = 0; s < total;) {
-        let e = ends.find(y => y > s);
-        for (const y of ends) if (y > e && y - s <= pageH) e = y;
-        if (s > 0) pdf.addPage();
-        const slice = document.createElement('canvas');
-        slice.width = canvas.width; slice.height = Math.round((e - s) * S);
-        slice.getContext('2d').drawImage(canvas, 0, -Math.round(s * S));
-        const f = Math.min(1, pageH / (e - s));
-        pdf.addImage(slice, 'PNG', 12 + W * (1 - f) / 2, 12, W * f, (e - s) * W / sheetW * f);
-        pdf.rect(6, 6, 285, 198);
-        s = e;
-      }
-      pdf.save(name + '.pdf');
-    } catch (err) {
-      console.error(String(err));
-      window.print();
-    } finally {
-      btn.disabled = false; btn.textContent = 'Save as PDF';
-    }
+  for (const b of document.querySelectorAll('.tabs button')) b.addEventListener('click', () => { showTab(b.dataset.tab); scrollTo(0, 0); });
+  $('#pdf').addEventListener('click', () => withPdf($('#pdf'), 'Save as PDF', pdf => pdf.save(pdfName() + '.pdf')));
+  $('#share').addEventListener('click', async () => {
+    const btn = $('#share');
+    if (pending) { const file = pending; pending = null; btn.textContent = SHARE; return navigator.share({ files: [file] }).catch(() => {}); }
+    await withPdf(btn, SHARE, async pdf => {
+      const file = new File([pdf.output('blob')], pdfName() + '.pdf', { type: 'application/pdf' });
+      if (!navigator.canShare?.({ files: [file] })) return pdf.save(file.name); // browsers that cannot share files (most desktops) download it instead
+      try { await navigator.share({ files: [file] }); }
+      catch (e) { if (e.name === 'NotAllowedError') pending = file; else if (e.name !== 'AbortError') console.error(String(e)); }
+    });
+    if (pending) btn.textContent = 'Tap to share';
   });
   build();
 }
@@ -353,6 +448,9 @@ for (let n = 2; n <= 64; n++) {
   for (let i = 0; i < s.length; i += 2) console.assert(s[i] !== null || s[i + 1] !== null, 'bye vs bye at', n);
   console.assert(s.filter(Boolean).length === n, 'every player placed', n);
 }
+const pg = parse('1. Aarav, A\n2) Vihaan\t\nU14:\nKabir\tB\n• Ishaan\nkabir\n# Empty');
+console.assert(pg.length === 2 && pg[0].players.map(p => p.name).join() === 'Aarav,Vihaan' && pg[0].players[0].lv === 0, 'paste cleanup');
+console.assert(pg[1].cat === 'U14' && pg[1].players.map(p => p.name).join() === 'Kabir,Ishaan' && pg[1].players[0].lv === 2 && pg[1].dups.join() === 'kabir', 'categories');
 </script>
 </body>
 </html>
